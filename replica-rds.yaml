@@ -1,0 +1,76 @@
+AWSTemplateFormatVersion: 2010-09-09
+Parameters:
+  VarDBInstanceClass:
+    Description: "Specify the Instance Class of replica DB"
+    Type: String
+    Default: "db.t3.micro"
+  VarDBInstanceIdentifier:
+    Description: "Specify the Instance Identifier ."
+    Type: String
+    Default: "Replica-db1"
+  VarSourceRegion:
+    Description: "Specify the Source region ."
+    Type: String
+    Default: "us-east-1" 
+
+Resources:
+  # myReplicaKey:
+  #  Type: 'AWS::KMS::ReplicaKey'
+  #  Properties:
+  #   PrimaryKeyArn: >-
+  #     arn:aws:kms:us-east-1:722581090783:key/mrk-f344c0d0010345adbdf990d2fab0fcfe
+  #   Description: Example replica key
+  #   PendingWindowInDays: 7
+  #   KeyPolicy:
+  #     Version: 2012-10-17
+  #     Id: key-default-1
+  #     Statement:
+  #       - Sid: Enable IAM User Permissions
+  #         Effect: Allow
+  #         Principal:
+  #           AWS: 'arn:aws:iam::722581090783:root'
+  #         Action: 'kms:*'
+  #         Resource: '*'
+  #       - Sid: Allow administration of the key
+  #         Effect: Allow
+  #         Principal:
+  #           AWS: 'arn:aws:iam::722581090783:root'
+  #         Action:
+  #           - 'kms:Create*'
+  #           - 'kms:Delete*'
+  #           - 'kms:Disable*'
+  #           - 'kms:Describe*'
+  #           - 'kms:Enable*'
+  #           - 'kms:Get*'
+  #           - 'kms:List*'
+  #           - 'kms:Put*'
+  #           - 'kms:Revoke*'
+  #           - 'kms:UpdateAlias'
+  #           - 'kms:ScheduleKeyDeletion'
+  #           - 'kms:CancelKeyDeletion'
+  #         Resource: '*'
+  #       - Sid: Allow use of the key
+  #         Effect: Allow
+  #         Principal:
+  #           AWS: 'arn:aws:iam::722581090783:root'
+  #         Action:
+  #           - 'kms:DescribeKey'
+  #           - 'kms:Encrypt'
+  #           - 'kms:Decrypt'
+  #           - 'kms:ReEncrypt*'
+  #           - 'kms:GenerateDataKey'
+  #           - 'kms:GenerateDataKeyWithoutPlaintext'
+  #         Resource: '*'
+  MyDBSmall:
+    Type: "AWS::RDS::DBInstance"
+    Properties:
+      DBInstanceClass: !Ref VarDBInstanceClass
+      DBInstanceIdentifier: !Ref VarDBInstanceIdentifier
+      SourceDBInstanceIdentifier: "arn:aws:rds:us-east-1:722581090783:db:webapp-db"
+      SourceRegion: !Ref VarSourceRegion
+      PubliclyAccessible: true
+      # KmsKeyId: "arn:aws:kms:us-west-1:722581090783:key/mrk-f344c0d0010345adbdf990d2fab0fcfe"
+Outputs:
+  InstanceId:
+    Description: InstanceId of the newly created RDS Instance
+    Value: !Ref MyDBSmall 

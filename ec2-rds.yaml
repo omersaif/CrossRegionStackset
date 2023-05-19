@@ -1,0 +1,117 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Parameters:
+  AvailabilityZone:
+    Type: AWS::EC2::AvailabilityZone::Name
+  EnvironmentType:
+    Description: "Specify the Environment type of the stack."
+    Type: String
+  KeyPairName:
+    Type: String
+    Description: The name of an existing Amazon EC2 key pair in this region to use to SSH into the Amazon EC2 instances.
+  DBInstanceIdentifier:
+    Type: String
+    Default: "webapp-db"
+  DBUsername:
+    NoEcho: "true"
+    Description: Username for Postgresql database access
+    Type: String
+    MinLength: "1"
+    MaxLength: "16"
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription: Must begin with a letter and contain only alphanumeric characters.
+    Default: "postgres"
+  DBPassword:
+    NoEcho: "true"
+    Description: Password Postgresql database access
+    Type: String
+    MinLength: "8"
+    MaxLength: "41"
+    AllowedPattern: "[a-zA-Z0-9]*"
+    ConstraintDescription: Must contain only alphanumeric characters.
+  WebAppInstanceImageId:
+    Description: "Specify the Image Name"
+    Type: String  
+    Default: "ami-0889a44b331db0194"
+  WebAppInstanceInstanceType:
+    Description: "Specify the Instance Type"
+    Type: String  
+    Default: "t2.micro"
+  WebAppDatabaseDBInstanceClass:
+    Description: "Specify the DB Instance Class"
+    Type: String  
+    Default: "db.t3.micro"
+  WebAppDatabaseEngine:
+    Description: "Specify the DB Engine"
+    Type: String  
+    Default: "postgres"    
+
+
+Resources:
+  WebAppInstance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: !Ref AvailabilityZone
+      ImageId: !Ref WebAppInstanceImageId 
+      InstanceType: !Ref WebAppInstanceInstanceType
+      KeyName: !Ref KeyPairName
+      SecurityGroupIds:
+        - !Ref WebAppSecurityGroup
+
+  WebAppSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: !Join ["-", [webapp-security-group, !Ref EnvironmentType]]
+      GroupDescription: "Allow HTTP/HTTPS and SSH inbound and outbound traffic"
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 443
+          ToPort: 443
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  WebAppEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      Domain: vpc
+      InstanceId: !Ref WebAppInstance
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [webapp-eip, !Ref EnvironmentType]]
+
+  WebAppDatabase:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      DBInstanceIdentifier: !Ref DBInstanceIdentifier
+      AllocatedStorage: "5"
+      # DBInstanceClass: db.t3.micro
+      DBInstanceClass: !Ref WebAppDatabaseDBInstanceClass
+      # Engine: postgres
+      Engine: !Ref WebAppDatabaseEngine
+      MasterUsername: !Ref DBUsername
+      MasterUserPassword: !Ref DBPassword
+      Tags:
+        - Key: Name
+          Value: !Join ["-", [webapp-rds, !Ref EnvironmentType]]
+    DeletionPolicy: Snapshot
+    UpdateReplacePolicy: Snapshot
+
+Outputs:
+  WebsiteURL:
+    Value: !Sub http://${WebAppEIP}
+    Description: WebApp URL
+
+  WebServerPublicDNS:
+    Description: "Public DNS of EC2 instance"
+    Value: !GetAtt WebAppInstance.PublicDnsName
+
+  WebAppDatabaseEndpoint:
+    Description: "Connection endpoint for the database"
+    Value: !GetAtt WebAppDatabase.Endpoint.Address
